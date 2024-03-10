@@ -1,0 +1,32 @@
+{
+  "name": "smoothrtc",
+  "version": "0.0.0",
+  "description": "WebRTC For Everyone",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mobin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MobinX/SmoothRTC.git"
+  },
+  "keywords": [
+    "webrtc",
+    "video",
+    "audio",
+    "room",
+    "peer",
+    "realtime",
+    "datachannel"
+  ],
+  "bugs": {
+    "url": "https://github.com/MobinX/SmoothRTC/issues"
+  },
+  "homepage": "https://github.com/MobinX/SmoothRTC#readme",
+  "dependencies": {
+    "pusher-js": "^8.4.0-rc2"
+  }
+}
