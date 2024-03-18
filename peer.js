@@ -17,9 +17,8 @@ export default class Peer {
      * @param {boolean} options.isPolite - Indicates if the Peer is polite.
      * @param {Function} options.onremotetrack - The callback function to handle remote tracks.
      */
-    constructor({ id, onsocketmsg = null /* onmessage should be call by outer function expictly */, sendmsg, ice, isPolite, onremotetrack }) {
+    constructor({ id, sendmsg, ice, isPolite, onremotetrack }) {
         this.id = id;
-        this.onsocketmsg = onsocketmsg;
         this.sendmsg = sendmsg;
         this.ice = ice;
         this.pc = new RTCPeerConnection(this.ice);
@@ -39,7 +38,7 @@ export default class Peer {
         this.ignoreOffer = false;
         this.polite = isPolite;
         this.pc.ontrack = onremotetrack;
-       onsocketmsg(async msg => this.onmessage(msg));
+   
         this.pc.oniceconnectionstatechange = () => {
             if (this.pc.iceConnectionState === "failed") {
                 this.pc.restartIce();
@@ -67,6 +66,7 @@ export default class Peer {
      * @param {Object} data - The data object containing description and candidate.
      */
     onmessage = async ({ type, data }) => {
+        console.log("Peer onmessage"+ this.id + "type"+type+"data"+data)
         try {
             if (type === "session_desc" || type === "offer" || type === "answer") {
                 const description = data;
