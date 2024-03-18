@@ -23,25 +23,50 @@ export default class Peer {
         this.sendmsg = sendmsg;
         this.ice = ice;
         this.pc = new RTCPeerConnection(this.ice);
-        
+
+        if (isPolite) {
+            console.log('creating data channel')
+            this.dataChannel = this.pc.createDataChannel("dc");
+            this.dataChannel.onerror = (error) => {
+                console.log('data channel error: ', error);
+            }
+            this.dataChannel.onopen = (event) => {
+                console.log('data channel opened'); this.dataChannel.send("iddd");
+            }
+            this.dataChannel.onmessage = (event) => {
+                console.log('data channel message received: ', event.data);
+            }
+        }
+
+        this.pc.ondatachannel = (event) => {
+            console.log('peer ondatachannel', event);
+            this.dataChannel = event.channel;
+            this.dataChannel.onopen = (event) => {
+                console.log('data channel opened'); this.dataChannel.send("idddx");
+            }
+            this.dataChannel.onmessage = (event) => {
+                console.log('data channel message received: ', event.data);
+            }
+        }
+
         this.makingOffer = false;
         this.pc.onnegotiationneeded = async () => {
             try {
-                console.log("Peer onnegotiationneeded"+ this.id)
+                console.log("Peer onnegotiationneeded" + this.id)
                 this.makingOffer = true;
                 await this.pc.setLocalDescription();
-                await this.sendmsg({ id:this.id , type: "session_desc", data: this.pc.localDescription });
+                await this.sendmsg({ id: this.id, type: "session_desc", data: this.pc.localDescription });
             } catch (err) {
                 console.error(err);
             } finally {
                 this.makingOffer = false;
             }
         }
-    
-        this.pc.onicecandidate =  async (candidate) => {
+
+        this.pc.onicecandidate = async (candidate) => {
             try {
                 if (candidate) {
-                    await this.sendmsg({ id:this.id, type: "ice", data: candidate });
+                    await this.sendmsg({ id: this.id, type: "ice", data: candidate });
                 }
             }
             catch (err) {
@@ -51,27 +76,21 @@ export default class Peer {
         }
         this.ignoreOffer = false;
         this.polite = isPolite;
-        this.pc.ontrack = ({ track, streams }) => { 
-            console.log('peer remote track received: ', track,streams);
-            onremotetrack({ track, streams }) };
+        this.pc.ontrack = ({ track, streams }) => {
+            console.log('peer remote track received: ', track, streams);
+            onremotetrack({ track, streams })
+        };
         this.pc.oniceconnectionstatechange = () => {
             if (this.pc.iceConnectionState === "failed") {
                 this.pc.restartIce();
             }
         }
 
-        this.dataChannel = this.pc.createDataChannel("MyApp Channel");
-        console.log(this.dataChannel)
-        this.dataChannel.onopen = (event) => {
-            console.log('data channel opened');this.sendDataChnMsg("iddd",this.id);
-        }
-        this.dataChannel.onmessage = (event) => {
-            console.log('data channel message received: ', event.data);
-        }
-        
+
+
     }
 
-    sendDataChnMsg = (msg) => { 
+    sendDataChnMsg = (msg) => {
         this.dataChannel.send(msg);
     }
 
@@ -84,7 +103,7 @@ export default class Peer {
      * @param {MediaStream} stream - The media stream to be added.
      */
     setSelfStream = (stream) => {
-        
+
         for (const track of stream.getTracks()) {
             this.pc.addTrack(track, stream);
         }
@@ -95,7 +114,7 @@ export default class Peer {
      * @param {Object} data - The data object containing description and candidate.
      */
     onmessage = async ({ type, data }) => {
-        console.log("peer onmessage",type,data,this.id)
+        console.log("peer onmessage", type, data, this.id)
         try {
             if (type === "session_desc" || type === "offer" || type === "answer") {
                 const description = data;
@@ -109,9 +128,10 @@ export default class Peer {
                 }
 
                 await this.pc.setRemoteDescription(description);
+
                 if (description.type === "offer") {
                     await this.pc.setLocalDescription();
-                    await this.sendmsg({ id:this.id , type: "session_desc", data: this.pc.localDescription });
+                    await this.sendmsg({ id: this.id, type: "session_desc", data: this.pc.localDescription });
                 }
             } else if (type === "ice") {
                 try {
@@ -134,7 +154,7 @@ export default class Peer {
         try {
             this.makingOffer = true;
             await this.pc.setLocalDescription();
-            await this.sendmsg({ id:this.id , type: "session_desc", data: pc.localDescription });
+            await this.sendmsg({ id: this.id, type: "session_desc", data: pc.localDescription });
         } catch (err) {
             console.error(err);
         } finally {
