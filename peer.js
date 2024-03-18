@@ -18,12 +18,26 @@ export default class Peer {
      * @param {Function} options.onremotetrack - The callback function to handle remote tracks.
      */
     constructor({ id, sendmsg, ice, isPolite, onremotetrack }) {
+
         this.id = id;
         this.sendmsg = sendmsg;
         this.ice = ice;
         this.pc = new RTCPeerConnection(this.ice);
+        
         this.makingOffer = false;
-        this.pc.onnegotiationneeded = this.onnegotiationneeded;
+        this.pc.onnegotiationneeded = async () => {
+            try {
+                console.log("Peer onnegotiationneeded"+ this.id)
+                this.makingOffer = true;
+                await this.pc.setLocalDescription();
+                await this.sendmsg({ id:this.id , type: "session_desc", data: this.pc.localDescription });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                this.makingOffer = false;
+            }
+        }
+    
         this.pc.onicecandidate =  async (candidate) => {
             try {
                 if (candidate) {
@@ -37,14 +51,28 @@ export default class Peer {
         }
         this.ignoreOffer = false;
         this.polite = isPolite;
-        this.pc.ontrack = onremotetrack;
-   
+        this.pc.ontrack = ({ track, streams }) => { 
+            console.log('peer remote track received: ', track,streams);
+            onremotetrack({ track, streams }) };
         this.pc.oniceconnectionstatechange = () => {
             if (this.pc.iceConnectionState === "failed") {
                 this.pc.restartIce();
             }
         }
 
+        this.dataChannel = this.pc.createDataChannel("MyApp Channel");
+        console.log(this.dataChannel)
+        this.dataChannel.onopen = (event) => {
+            console.log('data channel opened');this.sendDataChnMsg("iddd",this.id);
+        }
+        this.dataChannel.onmessage = (event) => {
+            console.log('data channel message received: ', event.data);
+        }
+        
+    }
+
+    sendDataChnMsg = (msg) => { 
+        this.dataChannel.send(msg);
     }
 
     test() {
@@ -56,6 +84,7 @@ export default class Peer {
      * @param {MediaStream} stream - The media stream to be added.
      */
     setSelfStream = (stream) => {
+        
         for (const track of stream.getTracks()) {
             this.pc.addTrack(track, stream);
         }
@@ -66,7 +95,7 @@ export default class Peer {
      * @param {Object} data - The data object containing description and candidate.
      */
     onmessage = async ({ type, data }) => {
-        console.log("Peer onmessage"+ this.id + "type"+type+"data"+data)
+        console.log("peer onmessage",type,data,this.id)
         try {
             if (type === "session_desc" || type === "offer" || type === "answer") {
                 const description = data;
