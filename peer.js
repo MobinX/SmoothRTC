@@ -52,8 +52,9 @@ export default class Peer {
         this.makingOffer = false;
         this.pc.onnegotiationneeded = async () => {
             try {
-                console.log("Peer onnegotiationneeded" + this.id)
+                console.log("Peer onnegotiationneeded" , this.id)
                 this.makingOffer = true;
+                console.log('making offer')
                 await this.pc.setLocalDescription();
                 await this.sendmsg({ id: this.id, type: "session_desc", data: this.pc.localDescription });
             } catch (err) {
@@ -81,6 +82,7 @@ export default class Peer {
             onremotetrack({ track, streams })
         };
         this.pc.oniceconnectionstatechange = () => {
+            console.log('peer ice connection state: ', this.pc.iceConnectionState);
             if (this.pc.iceConnectionState === "failed") {
                 this.pc.restartIce();
             }
@@ -113,8 +115,9 @@ export default class Peer {
      * Handle incoming socket messages.
      * @param {Object} data - The data object containing description and candidate.
      */
-    onmessage = async ({ type, data }) => {
+    onmessage = async ({id, type, data }) => {
         console.log("peer onmessage", type, data, this.id)
+       
         try {
             if (type === "session_desc" || type === "offer" || type === "answer") {
                 const description = data;
@@ -124,12 +127,14 @@ export default class Peer {
 
                 this.ignoreOffer = !this.polite && offerCollision;
                 if (this.ignoreOffer) {
+                    console.log("ignoring offer");
                     return;
                 }
-
+                console.log("setting remote description");
                 await this.pc.setRemoteDescription(description);
 
                 if (description.type === "offer") {
+                    console.log("offer received");
                     await this.pc.setLocalDescription();
                     await this.sendmsg({ id: this.id, type: "session_desc", data: this.pc.localDescription });
                 }

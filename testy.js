@@ -10,7 +10,18 @@ ably.connection.once('connected').then(() => {
   console.log('Connected to Ably!');
 })
 const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
+const createRemoteVideobyId = (id) => {
+  const remoteVideo = document.createElement('video');
+  remoteVideo.id = id;
+  remoteVideo.autoplay = true;
+  remoteVideo.playsInline = true;
+  document.body.appendChild(remoteVideo);
+  return remoteVideo;
+}
+const removeRemoteVideobyId = (id) => {
+  const remoteVideo = document.getElementById(id);
+  document.body.removeChild(remoteVideo);
+}
 
 window.stream = await openVedio();
 console.log('stream: ', window.stream);
@@ -32,21 +43,44 @@ const channel = ably.channels.get('quickstart');
 
 await channel.subscribe('greeting', async (message) => {
   if (message.clientId === myid) {
+    //checking i am not worikng on my own msg
     return;
   } else {
-    console.log('message received: ')
-    console.log(message);
-    if (Peers.length === 0) {
-      await createPeer(message.clientId, true);
-      Peers.forEach(async peer => {
-        await peer.onmessage(message.data);
-      });
-      return;
-    } else {
-      Peers.forEach(async peer => {
-        await peer.onmessage(message.data);
-      });
+
+    if (message.data.id === myid) {
+      //checking if the msg is for me
+      console.log('message received: ')
+      console.log(message);
+      if (Peers.length === 0) {
+        //every peer is created based on the id of his massage. so peer.id contain remote peer id 
+        //when a peer send msg it include the id it got from constractor in the msg.
+        // so massage.clientId is the id of the peer that send the msg.
+        //massage.data.id is the id of the peer whom he sends msg to.
+        createPeer(message.clientId, true,message.data);
+     
+        return;
+      } else {
+        let senderId = message.clientId
+        console.log('sender id: ', senderId);
+        const peerindex = Peers.findIndex(peer => peer.id === senderId);
+        if (peerindex !== -1) {
+          await Peers[peerindex].onmessage(message.data);
+          return;
+        } else {
+          createPeer(senderId, true,message.data);
+          return;
+        }
+        // Peers.forEach(async peer => {
+
+        // if(peer.id === senderId && message.data.id === myid){ //if the sender is the peer that send the msg and the msg is for me
+        //     await peer.onmessage(message.data);
+        //     return;
+        // }
+        // });
+      }
+
     }
+
   }
 
 });
@@ -67,7 +101,7 @@ channel.presence.subscribe('leave', async function (member) {
   await removePeer(member.clientId);
 });
 channel.presence.get(function (err, members) {
-  console.log('There are ' + members.length + ' members on this channel');
+  console.log('There are ' + members.length + ' members on peer channel');
   console.log(members);
 
 });
@@ -76,7 +110,10 @@ channel.presence.get(function (err, members) {
 
 
 
-async function createPeer(id, isPolite) {
+ function createPeer(id, isPolite,initailRemoteMsg = null) {
+  console.log('Peers1: ', Peers);
+
+  const remoteVideo = createRemoteVideobyId(id);
   const peer = new Peer({
     id: id,
     ice: { iceServers },
@@ -89,17 +126,29 @@ async function createPeer(id, isPolite) {
       console.log("is track kind: ", track.kind);
       console.log("is stram active: ", streams[0].active);
       track.onunmute = () => {
-        console.log('track unmuted'); 
-      console.log("is track muted: ", track.muted);
-       
+        console.log('track unmuted');
+        console.log("is track muted: ", track.muted);
+
         remoteVideo.srcObject = streams[0];
-        remoteVideo.play();
+       
         console.log("is track muted: ", track.muted);
         console.log("remote video srcObject: ", remoteVideo.srcObject);
       }
-      track.onmute = () => {
-        console.log('track muted');
-      }
+      track.onmute = async () => {
+        try {
+          console.log('track muted, renegotiating');
+            console.log("Peer onnegotiationneeded" , peer.id)
+            peer.makingOffer = true;
+            console.log('making offer')
+            await peer.pc.setLocalDescription();
+            await peer.sendmsg({ id: peer.id, type: "session_desc", data: peer.pc.localDescription });
+        } catch (err) {
+            console.error(err);
+        } finally {
+            peer.makingOffer = false;
+        }
+    }
+
     },
     sendmsg: async (msg) => {
       await sendmsg(msg);
@@ -107,6 +156,7 @@ async function createPeer(id, isPolite) {
 
   });
   peer.setSelfStream(window.stream);
+  if(initailRemoteMsg !== null) peer.onmessage(initailRemoteMsg);
   Peers.push(peer);
 
   console.log('peer created: ', peer.id)
@@ -116,6 +166,7 @@ async function createPeer(id, isPolite) {
 }
 
 async function removePeer(id) {
+  removeRemoteVideobyId(id);
   const index = Peers.findIndex(peer => peer.id === id);
   if (index !== -1) {
     Peers.splice(index, 1);
