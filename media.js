@@ -3,7 +3,7 @@ async function openCamera(preStream = null ) {
 
         if (videoTrack && videoTrack.readyState && videoTrack.readyState === 'ended') {
             // Request a new video stream
-            const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: true,audio:true });
 
             // Remove the old video track
             preStream.removeTrack(preStream.getVideoTracks()[0]);
@@ -15,7 +15,7 @@ async function openCamera(preStream = null ) {
         }
     }
     else {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true,audio:true });
         return stream;
     }
 
@@ -25,7 +25,7 @@ async function openCamera(preStream = null ) {
 async function openMicrophone(preStream = null, audioTrack = null) {
     // Open microphone
     if (preStream != null) {
-        if (audioTrack && audioTrack.readyState && audioTrack.readyState === 'ended') {
+        if (audioTrack && audioTrack.readyState && audioTrack.readyState === 'ended') {}
             // Request a new audio stream
             const newAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -36,7 +36,7 @@ async function openMicrophone(preStream = null, audioTrack = null) {
             preStream.addTrack(newAudioStream.getAudioTracks()[0]);
 
             return newAudioStream;
-        }
+        
     }
     else {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
