@@ -1,14 +1,5 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
+
+
 class WebrtcBase {
     constructor(my_connid, iceConfiguration, serverFn) {
         this._iceConfiguration = null;
@@ -45,10 +36,48 @@ class WebrtcBase {
         this._iceConfiguration = iceConfiguration;
     }
     // connections management
+    _AlterAudioVideoSenders(track, rtpSenders) {
+        for (let conId in this._peers_ids) {
+            if (this._peerConnections[conId] && this._isConnectionAlive(this._peerConnections[conId])) {
+                if (rtpSenders[conId] && rtpSenders[conId].track) {
+                    rtpSenders[conId].replaceTrack(track);
+                }
+                else {
+                    rtpSenders[conId] = this._peerConnections[conId].addTrack(track);
+                }
+            }
+        }
+    }
     createConnection(connid_1, politePeerState_1) {
         return __awaiter(this, arguments, void 0, function* (connid, politePeerState, extraInfo = null) {
-            if (this._iceConfiguration) {
-                let connection = new RTCPeerConnection(this._iceConfiguration);
+            if (this._iceConfiguration && !this._peerConnections[connid]) {
+                let connection = new RTCPeerConnection({
+                    iceServers:[
+                        {
+                            "urls": "stun:stun.relay.metered.ca:80"
+                        },
+                        {
+                            "urls": "turn:standard.relay.metered.ca:80",
+                            "username": "9bc1f0c0169adfad344ffc70",
+                            "credential": "1yiBhcp4fP8smWv8"
+                        },
+                        {
+                            "urls": "turn:standard.relay.metered.ca:80?transport=tcp",
+                            "username": "9bc1f0c0169adfad344ffc70",
+                            "credential": "1yiBhcp4fP8smWv8"
+                        },
+                        {
+                            "urls": "turn:standard.relay.metered.ca:443",
+                            "username": "9bc1f0c0169adfad344ffc70",
+                            "credential": "1yiBhcp4fP8smWv8"
+                        },
+                        {
+                            "urls": "turns:standard.relay.metered.ca:443?transport=tcp",
+                            "username": "9bc1f0c0169adfad344ffc70",
+                            "credential": "1yiBhcp4fP8smWv8"
+                        }
+                    ]
+                });
                 connection.onicecandidate = (event) => {
                     if (event.candidate) {
                         this._serverFn(JSON.stringify({ 'iceCandidate': event.candidate }), connid);
@@ -113,6 +142,16 @@ class WebrtcBase {
                 this._politePeerStates[connid] = politePeerState;
                 if (extraInfo) {
                     this._peersInfo[connid] = extraInfo;
+                }
+
+                if(this._videoTrack){
+                    this._AlterAudioVideoSenders(this._videoTrack,this._rtpVideoSenders)
+                }
+                if(this._audioTrack){
+                    this._AlterAudioVideoSenders(this._audioTrack,this._rtpAudioSenders)
+                }
+                if(this._screenTrack){
+                    this._AlterAudioVideoSenders(this._screenTrack,this._rtpScreenSenders)
                 }
                 this._updatePeerState();
             }
@@ -233,9 +272,9 @@ class WebrtcBase {
                 peerProperties.push({
                     socketId: connid,
                     info: this._peersInfo[connid],
-                    isAudioOn: this._remoteAudioStreams[connid] != null && this._remoteAudioStreams[connid].getAudioTracks()[0].enabled,
-                    isVideoOn: this._remoteVideoStreams[connid] != null && this._remoteVideoStreams[connid].getVideoTracks()[0].enabled,
-                    isScreenShareOn: this._remoteScreenShareStreams[connid] != null && this._remoteScreenShareStreams[connid].getVideoTracks()[0].enabled,
+                    isAudioOn: this._remoteAudioStreams[connid] != null && this._remoteAudioStreams[connid]?.getAudioTracks()[0]?.enabled,
+                    isVideoOn: this._remoteVideoStreams[connid] != null && this._remoteVideoStreams[connid]?.getVideoTracks()[0]?.enabled,
+                    isScreenShareOn: this._remoteScreenShareStreams[connid] != null && this._remoteScreenShareStreams[connid]?.getVideoTracks()[0]?.enabled,
                     audioStream: this._remoteAudioStreams[connid],
                     videoStream: this._remoteVideoStreams[connid],
                     screenShareStream: this._remoteScreenShareStreams[connid],
@@ -243,20 +282,10 @@ class WebrtcBase {
                 });
             }
         }
+        console.log(peerProperties);
         this._onPeerStateChanged.forEach(fn => fn(peerProperties));
     }
-    _AlterAudioVideoSenders(track, rtpSenders) {
-        for (let conId in this._peers_ids) {
-            if (this._peerConnections[conId] && this._isConnectionAlive(this._peerConnections[conId])) {
-                if (rtpSenders[conId] && rtpSenders[conId].track) {
-                    rtpSenders[conId].replaceTrack(track);
-                }
-                else {
-                    rtpSenders[conId] = this._peerConnections[conId].addTrack(track);
-                }
-            }
-        }
-    }
+  
     _RemoveAudioVideoSenders(rtpSenders) {
         for (let conId in this._peers_ids) {
             if (this._peerConnections[conId] && this._isConnectionAlive(this._peerConnections[conId])) {
@@ -422,4 +451,207 @@ class WebrtcBase {
         this._onError.forEach(fn => fn(error));
     }
 }
-exports.default = WebrtcBase;
+
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+// import WebrtcBase from "./peerx.ts";
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    const response2 = yield fetch('https://global.xirsys.net/_turn/sigflow', {
+        method: 'PUT',
+        headers: {
+            'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    });
+    const data = yield response2.json();
+    const response = yield fetch("https://virsys.metered.live/api/v1/turn/credentials?apiKey=ca9f4e60bf446fc29401ccb1fa904d110708");
+
+    console.log('response: ', data);
+    // const iceServers = await response.json();
+    // const iceServers = data.v.iceServers
+    const iceServers = yield response.json();
+    // 
+    let isWrtcInit = false;
+    const ably = new Ably.Realtime({ key: 'YSXfdw.ksCpsA:Bf6jKYu4LPPpMfiFkSMJrZ4q4ArLDkuBf7bJCPxKQUo', clientId: Math.random().toString(36).substring(7) });
+    ably.connection.once('connected').then(() => __awaiter(void 0, void 0, void 0, function* () {
+        const response2 = yield fetch('https://global.xirsys.net/_turn/sigflow', {
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
+        const data = yield response2.json();
+        console.log('response: ', data);
+        // const iceServers = await response.json();
+        const iceServers = data.v.iceServers;
+        if (!isWrtcInit) {
+            // webRt = new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
+            isWrtcInit = true;
+        }
+        console.log('Connected to Ably!');
+    }));
+    console.log(iceServers)
+    let webRt = new WebrtcBase(ably.auth.clientId,{ iceServers: iceServers }, sendmsg,  );//new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
+
+    const myid = ably.auth.clientId;
+    console.log('myid: ', myid);
+    const channel = ably.channels.get('quickstart');
+    document.title = myid;
+    function sendmsg(msg, to) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield channel.publish('greeting', { data: msg, clientId: myid, to: to });
+            console.log('message sent: ', msg);
+        });
+    }
+    yield channel.subscribe('greeting', (message) => __awaiter(void 0, void 0, void 0, function* () {
+        // clientid ==  sender from
+        // id == receiver (to)
+        if (message.clientId === myid) {
+            //checking i am not worikng on my own msg
+            return;
+        }
+        else {
+            if (message.data.to === myid) {
+                //checking if the msg is for me
+                console.log('message received from: ' + message.clientId);
+                if (!isWrtcInit) {
+                    const response2 = yield fetch('https://global.xirsys.net/_turn/sigflow', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    const data = yield response2.json();
+                    console.log('response: ', data);
+                    // const iceServers = await response.json();
+                    const iceServers = data.v.iceServers;
+                    if (!isWrtcInit) {
+                        // webRt = new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
+                        isWrtcInit = true;
+                    }
+                }
+                console.log(message);
+                yield webRt.onSocketMessage(message.data.data, message.clientId);
+            }
+        }
+    }));
+    let _localVideoPlayer = document.getElementById('localVideoCtr');
+    webRt.onCameraVideoStateChange((state, stream) => {
+        if (state) {
+            _localVideoPlayer.srcObject = stream;
+        }
+        else {
+            _localVideoPlayer.srcObject = null;
+        }
+    });
+    $("#btnMuteUnmute").on('click', function () {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield webRt.toggleAudio();
+        });
+    });
+    $("#btnStartStopCam").on('click', function () {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield webRt.toggleCamera();
+        });
+    });
+    webRt.onPeerStateChange((peerstate) => {
+        if (peerstate) {
+            console.log("peerstate", peerstate);
+            for (let peerz in peerstate) {
+                let pr = peerstate[peerz];
+                let remoteElm = document.getElementById(peerstate[peerz].socketId);
+                if (!remoteElm) {
+                    AddNewUser(peerstate[peerz].socketId, peerstate[peerz].socketId);
+                }
+                let video = remoteElm.querySelector('video'), audio = remoteElm.querySelector('audio');
+                if (pr.isAudioOn) {
+                    if (audio) {
+                        audio.srcObject = peerstate[peerz].audioStream;
+                    }
+                }
+                else {
+                    if (audio) {
+                        audio.srcObject = null;
+                    }
+                }
+                if (pr.isVideoOn) {
+                    if (video) {
+                        video.srcObject = peerstate[peerz].videoStream;
+                    }
+                }
+                else {
+                    if (video) {
+                        video.srcObject = null;
+                    }
+                }
+            }
+        }
+    });
+    channel.presence.subscribe('enter', function (member) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (member.clientId === myid) {
+                return;
+            }
+            console.log("informAboutNewConnection", member);
+            AddNewUser(member.clientId, member.clientId);
+            webRt.createConnection(member.clientId, true);
+        });
+    });
+    channel.presence.subscribe('leave', function (member) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (member.clientId === myid) {
+                return;
+            }
+            $('#' + member.clientId).remove();
+            webRt.closeConnection(member.clientId);
+        });
+    });
+    channel.presence.get(function (err, other_users) {
+        console.log("userconnected", other_users);
+        $('#divUsers .other').remove();
+        if (other_users) {
+            for (var i = 0; i < other_users.length; i++) {
+                AddNewUser(other_users[i].clientId, other_users[i].clientId);
+                webRt.createConnection(other_users[i].clientId, false);
+            }
+        }
+        $(".toolbox").show();
+        $('#messages').show();
+        $('#divUsers').show();
+    });
+    $('#btnResetMeeting').on('click', function () {
+        socket.emit('reset');
+    });
+    $('#btnsend').on('click', function () {
+        //_hub.server.sendMessage($('#msgbox').val());
+        socket.emit('sendMessage', $('#msgbox').val());
+        $('#msgbox').val('');
+    });
+    $('#divUsers').on('dblclick', 'video', function () {
+        this.requestFullscreen();
+    });
+    function AddNewUser(other_user_id, connId) {
+        var $newDiv = $('#otherTemplate').clone();
+        $newDiv = $newDiv.attr('id', connId).addClass('other');
+        $newDiv.find('h2').text(other_user_id);
+        $newDiv.find('video').attr('id', 'v_' + connId);
+        $newDiv.find('audio').attr('id', 'a_' + connId);
+        $newDiv.show();
+        $('#divUsers').append($newDiv);
+    }
+    channel.presence.enter("mobin");
+}))();

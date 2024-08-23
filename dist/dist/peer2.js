@@ -100,9 +100,15 @@ class WebrtcBase {
                         this._remoteAudioStreams[connid] = new MediaStream();
                     }
                     if (event.track.kind == 'video') {
-                        this._remoteVideoStreams[connid].getVideoTracks().forEach(t => { var _a; return (_a = this._remoteVideoStreams[connid]) === null || _a === void 0 ? void 0 : _a.removeTrack(t); });
-                        this._remoteVideoStreams[connid].addTrack(event.track);
-                        // this._remoteVideoStreams[connid].getTracks().forEach(t => console.log(t));
+                        if (event.track.label == 'screen') {
+                            this._remoteScreenShareStreams[connid] = new MediaStream();
+                            this._remoteScreenShareStreams[connid].addTrack(event.track);
+                        }
+                        else {
+                            this._remoteVideoStreams[connid].getVideoTracks().forEach(t => { var _a; return (_a = this._remoteVideoStreams[connid]) === null || _a === void 0 ? void 0 : _a.removeTrack(t); });
+                            this._remoteVideoStreams[connid].addTrack(event.track);
+                            // this._remoteVideoStreams[connid].getTracks().forEach(t => console.log(t));
+                        }
                         this._updatePeerState();
                     }
                     if (event.track.kind == 'audio') {
@@ -358,6 +364,8 @@ class WebrtcBase {
                 };
                 this._ClearScreenVideoStreams(this._rtpScreenShareSenders);
                 if (screenStream && screenStream.getVideoTracks().length > 0) {
+                    // set the screen share track label as "screen"
+                    screenStream.getVideoTracks()[0].label = "screen";
                     this._screenShareTrack = screenStream.getVideoTracks()[0];
                     this._emitScreenShareState(true);
                     this._AlterAudioVideoSenders(this._screenShareTrack, this._rtpScreenShareSenders);

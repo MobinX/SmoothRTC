@@ -47,7 +47,7 @@ class WebrtcBase {
     // connections management
     createConnection(connid_1, politePeerState_1) {
         return __awaiter(this, arguments, void 0, function* (connid, politePeerState, extraInfo = null) {
-            if (this._iceConfiguration) {
+            if (this._iceConfiguration && !this._peerConnections[connid]) {
                 let connection = new RTCPeerConnection(this._iceConfiguration);
                 connection.onicecandidate = (event) => {
                     if (event.candidate) {

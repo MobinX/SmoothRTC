@@ -62,7 +62,7 @@ export default class WebrtcBase {
 
     // connections management
     async createConnection(connid: string, politePeerState: boolean, extraInfo: any | null = null) {
-        if (this._iceConfiguration) {
+        if (this._iceConfiguration && !this._peerConnections[connid]) {
             let connection = new RTCPeerConnection(this._iceConfiguration)
 
             connection.onicecandidate = (event) => {
