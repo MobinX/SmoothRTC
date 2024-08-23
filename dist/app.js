@@ -52,7 +52,7 @@ class WebrtcBase {
         return __awaiter(this, arguments, void 0, function* (connid, politePeerState, extraInfo = null) {
             if (this._iceConfiguration && !this._peerConnections[connid]) {
                 let connection = new RTCPeerConnection({
-                    iceServers:[
+                    iceServers: [
                         {
                             "urls": "stun:stun.relay.metered.ca:80"
                         },
@@ -140,18 +140,19 @@ class WebrtcBase {
                 this._peers_ids[connid] = connid;
                 this._peerConnections[connid] = connection;
                 this._politePeerStates[connid] = politePeerState;
+                yield this._createOffer(connid);
                 if (extraInfo) {
                     this._peersInfo[connid] = extraInfo;
                 }
 
-                if(this._videoTrack){
-                    this._AlterAudioVideoSenders(this._videoTrack,this._rtpVideoSenders)
+                if (this._videoTrack) {
+                    this._AlterAudioVideoSenders(this._videoTrack, this._rtpVideoSenders)
                 }
-                if(this._audioTrack){
-                    this._AlterAudioVideoSenders(this._audioTrack,this._rtpAudioSenders)
+                if (this._audioTrack) {
+                    this._AlterAudioVideoSenders(this._audioTrack, this._rtpAudioSenders)
                 }
-                if(this._screenTrack){
-                    this._AlterAudioVideoSenders(this._screenTrack,this._rtpScreenSenders)
+                if (this._screenTrack) {
+                    this._AlterAudioVideoSenders(this._screenTrack, this._rtpScreenSenders)
                 }
                 this._updatePeerState();
             }
@@ -285,7 +286,7 @@ class WebrtcBase {
         console.log(peerProperties);
         this._onPeerStateChanged.forEach(fn => fn(peerProperties));
     }
-  
+
     _RemoveAudioVideoSenders(rtpSenders) {
         for (let conId in this._peers_ids) {
             if (this._peerConnections[conId] && this._isConnectionAlive(this._peerConnections[conId])) {
@@ -310,6 +311,14 @@ class WebrtcBase {
             this._screenShareTrack.stop();
             this._screenShareTrack = null;
             this._RemoveAudioVideoSenders(_rtpScreenSenders);
+        }
+    }
+    _ClearAudioStreams(_rtpAudioSenders) {
+        if (this._audioTrack) {
+            this._audioTrack.enabled = false;
+            this._audioTrack.stop();
+            this._audioTrack = null;
+            this._RemoveAudioVideoSenders(_rtpAudioSenders);
         }
     }
     startCamera() {
@@ -404,25 +413,27 @@ class WebrtcBase {
     }
     startAudio() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this._audioTrack) {
-                try {
+
+            try {
+                if (!this._audioTrack) {
                     let audioStream = yield navigator.mediaDevices.getUserMedia({
                         video: false,
                         audio: true
                     });
                     this._audioTrack = audioStream.getAudioTracks()[0];
-                    if (this._isAudioMuted) {
-                        this._audioTrack.enabled = true;
-                        this._isAudioMuted = false;
-                        this._AlterAudioVideoSenders(this._audioTrack, this._rtpAudioSenders);
-                        this._emitAudioState(true);
-                    }
                 }
-                catch (e) {
-                    console.log(e);
-                    this._emitError("Failed to start audio");
+                if (this._isAudioMuted) {
+                    this._audioTrack.enabled = true;
+                    this._isAudioMuted = false;
+                    this._AlterAudioVideoSenders(this._audioTrack, this._rtpAudioSenders);
+                    this._emitAudioState(true);
                 }
             }
+            catch (e) {
+                console.log(e);
+                this._emitError("Failed to start audio");
+            }
+
         });
     }
     stopAudio() {
@@ -503,7 +514,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         console.log('Connected to Ably!');
     }));
     console.log(iceServers)
-    let webRt = new WebrtcBase(ably.auth.clientId,{ iceServers: iceServers }, sendmsg,  );//new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
+    let webRt = new WebrtcBase(ably.auth.clientId, { iceServers: iceServers }, sendmsg,);//new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
 
     const myid = ably.auth.clientId;
     console.log('myid: ', myid);
@@ -581,6 +592,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pr.isAudioOn) {
                     if (audio) {
                         audio.srcObject = peerstate[peerz].audioStream;
+                        audio.play();
                     }
                 }
                 else {
@@ -591,6 +603,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pr.isVideoOn) {
                     if (video) {
                         video.srcObject = peerstate[peerz].videoStream;
+                        video.play();
                     }
                 }
                 else {
