@@ -1,2 +1,2 @@
-import Peer from './dist/peer2.JS';
-export {Peer}
+import WebrtcBase from './dist/peer2.js';
+export {WebrtcBase}

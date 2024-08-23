@@ -14,7 +14,7 @@ interface PeerStateChangedHandler {
     }[]): void;
 }
 
-export class WebrtcBase {
+export default class WebrtcBase {
     private _iceConfiguration: RTCConfiguration | null = null
     // local tracks
     private _audioTrack: MediaStreamTrack | null = null
@@ -113,10 +113,15 @@ export class WebrtcBase {
                 }
 
                 if (event.track.kind == 'video') {
-                    this._remoteVideoStreams[connid].getVideoTracks().forEach(t => this._remoteVideoStreams[connid]?.removeTrack(t));
-                    this._remoteVideoStreams[connid].addTrack(event.track);
-                    // this._remoteVideoStreams[connid].getTracks().forEach(t => console.log(t));
-
+                    if (event.track.label == 'screen') {
+                        this._remoteScreenShareStreams[connid] = new MediaStream();
+                        this._remoteScreenShareStreams[connid].addTrack(event.track);
+                    }
+                    else {
+                        this._remoteVideoStreams[connid].getVideoTracks().forEach(t => this._remoteVideoStreams[connid]?.removeTrack(t));
+                        this._remoteVideoStreams[connid].addTrack(event.track);
+                        // this._remoteVideoStreams[connid].getTracks().forEach(t => console.log(t));
+                    }
                     this._updatePeerState();
 
                 }
@@ -319,6 +324,7 @@ export class WebrtcBase {
 
     _ClearCameraVideoStreams(_rtpVideoSenders: any) {
         if (this._videoTrack) {
+            this._videoTrack.enabled = false;
             this._videoTrack.stop();
             this._videoTrack = null;
             this._RemoveAudioVideoSenders(_rtpVideoSenders);
@@ -327,6 +333,7 @@ export class WebrtcBase {
 
     _ClearScreenVideoStreams(_rtpScreenSenders: any) {
         if (this._screenShareTrack) {
+            this._screenShareTrack.enabled = false;
             this._screenShareTrack.stop();
             this._screenShareTrack = null;
             this._RemoveAudioVideoSenders(_rtpScreenSenders);
@@ -344,7 +351,7 @@ export class WebrtcBase {
         try {
             let videoStream = await navigator.mediaDevices.getUserMedia(cameraConfig);
             this._ClearCameraVideoStreams(this._rtpVideoSenders);
-            if(videoStream && videoStream.getVideoTracks().length > 0){ 
+            if (videoStream && videoStream.getVideoTracks().length > 0) {
                 this._videoTrack = videoStream.getVideoTracks()[0];
                 this._emitCameraVideoState(true);
                 this._AlterAudioVideoSenders(this._videoTrack, this._rtpVideoSenders);
@@ -358,15 +365,30 @@ export class WebrtcBase {
     }
 
     _emitCameraVideoState(state: boolean) {
-        this._onCameraVideoStateChanged.forEach(fn => fn(state,(this._videoTrack && new MediaStream([this._videoTrack]))));
+        this._onCameraVideoStateChanged.forEach(fn => fn(state, (this._videoTrack && new MediaStream([this._videoTrack]))));
     }
+
+    onCameraVideoStateChange(fn: (state: boolean, stream: MediaStream | null) => void) {
+        this._onCameraVideoStateChanged.push(fn);
+    }
+
 
     _emitScreenShareState(state: boolean) {
-        this._onScreenShareVideoStateChanged.forEach(fn => fn(state,(this._screenShareTrack  && new MediaStream([this._screenShareTrack]))));
+        this._onScreenShareVideoStateChanged.forEach(fn => fn(state, (this._screenShareTrack && new MediaStream([this._screenShareTrack]))));
     }
 
+    onScreenShareVideoStateChange(fn: (state: boolean, stream: MediaStream | null) => void) {
+        this._onScreenShareVideoStateChanged.push(fn);
+    }
+
+
+
     _emitAudioState(state: boolean) {
-        this._onAudioStateChanged.forEach(fn => fn(state,(this._audioTrack && new MediaStream([this._audioTrack]))));
+        this._onAudioStateChanged.forEach(fn => fn(state, (this._audioTrack && new MediaStream([this._audioTrack]))));
+    }
+
+    onAudioStateChange(fn: (state: boolean, stream: MediaStream | null) => void) {
+        this._onAudioStateChanged.push(fn);
     }
 
     stopCamera() {
@@ -375,8 +397,8 @@ export class WebrtcBase {
         this._isVideoMuted = true
     }
 
-   async toggleCamera() {
-     if(this._isVideoMuted) await this.startCamera(); else this.stopCamera();
+    async toggleCamera() {
+        if (this._isVideoMuted) await this.startCamera(); else this.stopCamera();
     }
 
 
@@ -389,12 +411,14 @@ export class WebrtcBase {
     }) {
         try {
             let screenStream = await navigator.mediaDevices.getDisplayMedia(screenConfig);
-            screenStream.oninactive = (e:any) => {
+            screenStream.oninactive = (e: any) => {
                 this._ClearScreenVideoStreams(this._rtpScreenShareSenders);
                 this._emitScreenShareState(false);
             }
             this._ClearScreenVideoStreams(this._rtpScreenShareSenders);
-            if(screenStream && screenStream.getVideoTracks().length > 0){ 
+            if (screenStream && screenStream.getVideoTracks().length > 0) {
+                // set the screen share track label as "screen"
+                screenStream.getVideoTracks()[0].label = "screen"
                 this._screenShareTrack = screenStream.getVideoTracks()[0];
                 this._emitScreenShareState(true);
                 this._AlterAudioVideoSenders(this._screenShareTrack, this._rtpScreenShareSenders);

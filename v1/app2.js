@@ -1,23 +1,24 @@
+import WebrtcBase from "./dist/peer2";
 (async () => {
-
+    let webRt =  new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);;
     let isWrtcInit = false;
     const ably = new Ably.Realtime({ key: 'YSXfdw.ksCpsA:Bf6jKYu4LPPpMfiFkSMJrZ4q4ArLDkuBf7bJCPxKQUo', clientId: Math.random().toString(36).substring(7) });
     ably.connection.once('connected').then(async () => {
         const response2 = await fetch('https://global.xirsys.net/_turn/sigflow', {
-  method: 'PUT',
-  headers: {
-    'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ })
-});
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
 
-const data = await response2.json();
-console.log('response: ', data);
-// const iceServers = await response.json();
-const iceServers = data.v.iceServers;
+        const data = await response2.json();
+        console.log('response: ', data);
+        // const iceServers = await response.json();
+        const iceServers = data.v.iceServers;
         if (!isWrtcInit) {
-            WrtcHelper.init(sendmsg, ably.auth.clientId, iceServers);
+            webRt = new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
             isWrtcInit = true;
         }
         console.log('Connected to Ably!');
@@ -26,8 +27,6 @@ const iceServers = data.v.iceServers;
     console.log('myid: ', myid);
     const channel = ably.channels.get('quickstart');
 
-    $('#meetingname').text(myid);
-    $('#me h2').text(myid + '(Me)');
     document.title = myid;
 
     async function sendmsg(msg, to) {
@@ -49,27 +48,27 @@ const iceServers = data.v.iceServers;
             if (message.data.to === myid) {
                 //checking if the msg is for me
                 console.log('message received from: ' + message.clientId);
-                if(!isWrtcInit){
+                if (!isWrtcInit) {
                     const response2 = await fetch('https://global.xirsys.net/_turn/sigflow', {
-  method: 'PUT',
-  headers: {
-    'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ })
-});
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Basic ' + btoa('mobin:e2d2ad94-0e2b-11eb-85a4-0242ac150006'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
 
-const data = await response2.json();
-console.log('response: ', data);
-// const iceServers = await response.json();
-const iceServers = data.v.iceServers;
+                    const data = await response2.json();
+                    console.log('response: ', data);
+                    // const iceServers = await response.json();
+                    const iceServers = data.v.iceServers;
                     if (!isWrtcInit) {
-                        WrtcHelper.init(sendmsg, ably.auth.clientId, iceServers);
+                        webRt = new WebrtcBase(sendmsg, ably.auth.clientId, iceServers);
                         isWrtcInit = true;
                     }
                 }
                 console.log(message);
-                await WrtcHelper.ExecuteClientFn(message.data.data, message.clientId);
+                await webRt.onMessage(message.data.data, message.clientId);
 
             }
 
@@ -98,8 +97,8 @@ const iceServers = data.v.iceServers;
         $('#divUsers .other').remove();
         if (other_users) {
             for (var i = 0; i < other_users.length; i++) {
-              /*  AddNewUser(other_users[i].clientId, other_users[i].clientId);
-                WrtcHelper.createNewConnection(other_users[i].clientId,false);*/
+                /*  AddNewUser(other_users[i].clientId, other_users[i].clientId);
+                  WrtcHelper.createNewConnection(other_users[i].clientId,false);*/
             }
         }
         $(".toolbox").show();
