@@ -36,8 +36,9 @@ class WebrtcBase {
         this._isScreenShareMuted = true;
         this._my_connid = '';
         // callback functions array
-        this._onLocalVideoStream = [];
-        this._onLocalAudioStream = [];
+        this._onCameraVideoStateChanged = [];
+        this._onScreenShareVideoStateChanged = [];
+        this._onAudioStateChanged = [];
         this._onPeerStateChanged = [];
         this._onError = [];
         this._my_connid = my_connid;
@@ -300,13 +301,13 @@ class WebrtcBase {
         });
     }
     _emitCameraVideoState(state) {
-        this._onCameraVideoStateChange.forEach(fn => fn(state, (this._videoTrack && new MediaStream([this._videoTrack]))));
+        this._onCameraVideoStateChanged.forEach(fn => fn(state, (this._videoTrack && new MediaStream([this._videoTrack]))));
     }
     _emitScreenShareState(state) {
-        this._onScreenShareStateChange.forEach(fn => fn(state, (this._screenShareTrack && new MediaStream([this._screenShareTrack]))));
+        this._onScreenShareVideoStateChanged.forEach(fn => fn(state, (this._screenShareTrack && new MediaStream([this._screenShareTrack]))));
     }
     _emitAudioState(state) {
-        this._onAudioStateChange.forEach(fn => fn(state, (this._audioTrack && new MediaStream([this._audioTrack]))));
+        this._onAudioStateChanged.forEach(fn => fn(state, (this._audioTrack && new MediaStream([this._audioTrack]))));
     }
     stopCamera() {
         this._ClearCameraVideoStreams(this._rtpVideoSenders);

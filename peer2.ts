@@ -47,8 +47,9 @@ export class WebrtcBase {
 
     // callback functions array
 
-    private _onLocalVideoStream: Function[] = []
-    private _onLocalAudioStream: Function[] = []
+    private _onCameraVideoStateChanged: Function[] = []
+    private _onScreenShareVideoStateChanged: Function[] = []
+    private _onAudioStateChanged: Function[] = []
     private _onPeerStateChanged: PeerStateChangedHandler[] = []
     private _onError: Function[] = []
 
@@ -357,15 +358,15 @@ export class WebrtcBase {
     }
 
     _emitCameraVideoState(state: boolean) {
-        this._onCameraVideoStateChange.forEach(fn => fn(state,(this._videoTrack && new MediaStream([this._videoTrack]))));
+        this._onCameraVideoStateChanged.forEach(fn => fn(state,(this._videoTrack && new MediaStream([this._videoTrack]))));
     }
 
     _emitScreenShareState(state: boolean) {
-        this._onScreenShareStateChange.forEach(fn => fn(state,(this._screenShareTrack  && new MediaStream([this._screenShareTrack]))));
+        this._onScreenShareVideoStateChanged.forEach(fn => fn(state,(this._screenShareTrack  && new MediaStream([this._screenShareTrack]))));
     }
 
     _emitAudioState(state: boolean) {
-        this._onAudioStateChange.forEach(fn => fn(state,(this._audioTrack && new MediaStream([this._audioTrack]))));
+        this._onAudioStateChanged.forEach(fn => fn(state,(this._audioTrack && new MediaStream([this._audioTrack]))));
     }
 
     stopCamera() {
