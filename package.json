@@ -29,6 +29,7 @@
   "homepage": "https://github.com/MobinX/SmoothRTC#readme",
   "dependencies": {
     "node-http": "^0.0.5",
-    "pusher-js": "^8.4.0-rc2"
+    "pusher-js": "^8.4.0-rc2",
+    "typescript": "^5.5.4"
   }
 }
