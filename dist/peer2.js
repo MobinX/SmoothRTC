@@ -299,6 +299,15 @@ class WebrtcBase {
             }
         });
     }
+    _emitCameraVideoState(state) {
+        this._onCameraVideoStateChange.forEach(fn => fn(state, (this._videoTrack && new MediaStream([this._videoTrack]))));
+    }
+    _emitScreenShareState(state) {
+        this._onScreenShareStateChange.forEach(fn => fn(state, (this._screenShareTrack && new MediaStream([this._screenShareTrack]))));
+    }
+    _emitAudioState(state) {
+        this._onAudioStateChange.forEach(fn => fn(state, (this._audioTrack && new MediaStream([this._audioTrack]))));
+    }
     stopCamera() {
         this._ClearCameraVideoStreams(this._rtpVideoSenders);
         this._emitCameraVideoState(false);
@@ -322,7 +331,7 @@ class WebrtcBase {
         }) {
             try {
                 let screenStream = yield navigator.mediaDevices.getDisplayMedia(screenConfig);
-                screenStream.oninactive = e => {
+                screenStream.oninactive = (e) => {
                     this._ClearScreenVideoStreams(this._rtpScreenShareSenders);
                     this._emitScreenShareState(false);
                 };

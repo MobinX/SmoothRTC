@@ -356,6 +356,18 @@ export class WebrtcBase {
         }
     }
 
+    _emitCameraVideoState(state: boolean) {
+        this._onCameraVideoStateChange.forEach(fn => fn(state,(this._videoTrack && new MediaStream([this._videoTrack]))));
+    }
+
+    _emitScreenShareState(state: boolean) {
+        this._onScreenShareStateChange.forEach(fn => fn(state,(this._screenShareTrack  && new MediaStream([this._screenShareTrack]))));
+    }
+
+    _emitAudioState(state: boolean) {
+        this._onAudioStateChange.forEach(fn => fn(state,(this._audioTrack && new MediaStream([this._audioTrack]))));
+    }
+
     stopCamera() {
         this._ClearCameraVideoStreams(this._rtpVideoSenders);
         this._emitCameraVideoState(false);
@@ -376,7 +388,7 @@ export class WebrtcBase {
     }) {
         try {
             let screenStream = await navigator.mediaDevices.getDisplayMedia(screenConfig);
-            screenStream.oninactive = e => {
+            screenStream.oninactive = (e:any) => {
                 this._ClearScreenVideoStreams(this._rtpScreenShareSenders);
                 this._emitScreenShareState(false);
             }
